@@ -125,21 +125,21 @@ function randomWithinRange(min, max) {
 }
 
 
-for(let i = 0; i < 3; i++) {
+for(let i = 0; i < 120; i++) {
 
     let radius;
     let x;
     let y;
 
     do {
-        radius =  100;
+        radius =  20;
         x = randomWithinRange(radius, canvas.width - radius);
         y = randomWithinRange(radius, canvas.height - radius);
     } while(hasCollision(x, y, radius, circles) === true);
     
     
-    const dx = Math.ceil(Math.random() * 5);
-    const dy = Math.ceil(Math.random() * 5);
+    const dx = Math.ceil(Math.random() * 3);
+    const dy = Math.ceil(Math.random() * 3);
 
     const rfill = Math.round(Math.random() * 255);
     const gfill = Math.round(Math.random() * 255);
