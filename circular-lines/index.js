@@ -49,16 +49,7 @@ for(let i = 0; i < 10; i++) {
 
 
 
-function animate() {
-    requestAnimationFrame(animate);
 
-    ctx.fillStyle = "rgba(255, 255, 255, 0.05)";
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-    for(let point of points) {
-        point.update(radius);
-        point.draw(ctx, MOUSE_POSITION.x, MOUSE_POSITION.y);
-    }
-}
 
 canvas.addEventListener("mousemove", (e) => {
     MOUSE_POSITION.x = e.x;
@@ -88,3 +79,15 @@ canvas.addEventListener("mouseup", (e) => {
 })
 
 animate();
+
+
+function animate() {
+    requestAnimationFrame(animate);
+
+    ctx.fillStyle = "rgba(255, 255, 255, 0.05)";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    for(let point of points) {
+        point.update(radius);
+        point.draw(ctx, MOUSE_POSITION.x, MOUSE_POSITION.y);
+    }
+}
