@@ -8,7 +8,7 @@ const ctx = canvas.getContext("2d");
 
 
 const PROJECTILE_SPEED = 5;
-const PROJECTILE_SIZE = 5;
+const PROJECTILE_SIZE = 2;
 const PROJECTILE_COLOR = "yellow";
 const STEP = 10;
 const HIT_DELAY = 300;
@@ -73,16 +73,41 @@ class ProjectileFactory {
 
 
 
-const player = new Player(canvas.width / 2, canvas.height / 2, 30, "blue");
+const player = new Player(canvas.width / 2, canvas.height / 2, 20, "blue");
 
 const projectiles = [];
+
+
+function sceneCreator() {
+    const xDirs = [];
+    const yDirs = [];
+    for(let i = 0; i < 200; i++) {
+        xDirs.push(Math.round(Math.random()* canvas.width) );
+        yDirs.push(Math.round(Math.random() * canvas.height));
+    }
+
+    return function() {
+        ctx.fillStyle = "black";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        function drawStars() {
+           for(let i = 0; i < xDirs.length; i++) {
+            ctx.beginPath();
+            ctx.arc(xDirs[i], yDirs[i], 1, 0, 2 * Math.PI, false);
+            ctx.fillStyle = "white";
+            ctx.fill();
+           }
+     
+        }
+        drawStars();
+    }
+}
+
+const createScene = sceneCreator();
 
 function animate() {
     requestAnimationFrame(animate);
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.fillStyle = "black";
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-    
+    createScene();
 
     // Draw All Projectiles
     projectiles.forEach(projectile => {
