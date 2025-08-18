@@ -72,10 +72,42 @@ class ProjectileFactory {
 }
 
 
+class Enemy {
+    constructor(x, y, radius, vx, vy) {
+        this.x = x;
+        this.y = y;
+        this.radius = radius;
+        this.vx = vx;
+        this.vy = vy;
+        this.color = "white";
+    }
+
+    draw(ctx) {
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.radius, 0, 2 * Math.PI, false);
+        ctx.fillStyle = this.color;
+        ctx.fill();
+    }
+
+    update(towards) {
+        const dx = towards.x - this.x;
+        const dy = towards.y - this.y;
+
+        const dist = Math.sqrt(Math.pow(dx, 2) + Math.pow(dy, 2));
+        const unitDx = dx / dist;
+        const unitDy = dy / dist;
+
+        this.x += unitDx * this.vx;
+        this.y += unitDy * this.vy;
+    }
+}
+
+
 
 const player = new Player(canvas.width / 2, canvas.height / 2, 20, "blue");
 
-const projectiles = [];
+const projectiles = new Set();
+const enemies = [];
 
 
 function sceneCreator() {
@@ -110,11 +142,26 @@ function animate() {
     createScene();
 
     // Draw All Projectiles
-    projectiles.forEach(projectile => {
+    for(let projectile of projectiles) {
+        if(projectile.x + projectile.radius >= canvas.width || projectile.x <= projectile.radius) {
+            projectiles.delete(projectile);
+            continue;
+        }
+
+        if(projectile.y + projectile.radius >= canvas.height || projectile.y <= projectile.radius) {
+            projectiles.delete(projectile);
+            continue;
+        }
+
         projectile.draw(ctx);
         projectile.update();
-    })
+    }
 
+    for(let enemy of enemies) {
+        enemy.draw(ctx);
+        enemy.update(player);
+    }
+    
     // Draw Player
     player.draw(ctx);
 
@@ -151,7 +198,7 @@ function throttle(fn, delay) {
 
 
 function attack(player, pos) {
-    projectiles.push(ProjectileFactory.createbaseProjectile(player, pos));
+    projectiles.add(ProjectileFactory.createbaseProjectile(player, pos));
 }
 
 const throttledAttack = throttle(attack, HIT_DELAY);
@@ -218,5 +265,12 @@ window.addEventListener("keyup", e => {
     keyPressed[e.key] = false;
 })
 
+setInterval(() => {
+    const xSpawnDir = Math.random() < 0.5 ? -1 : 1;
+    const ySpawnDir = Math.random() < 0.5 ? -1 : 1;
+    const xPos = (canvas.width + Math.random() * canvas.width) * xSpawnDir;
+    const yPos = (canvas.height + Math.random() * canvas.height) * ySpawnDir;
+    enemies.push(new Enemy(xPos, yPos, 20, 0.5, 0.5));
+}, 1000);
 
 animate();
