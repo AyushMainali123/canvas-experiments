@@ -7,11 +7,18 @@ canvas.height = window.innerHeight;
 const ctx = canvas.getContext("2d");
 
 
-const PROJECTILE_SPEED = 5;
+const PROJECTILE_SPEED = 10;
 const PROJECTILE_SIZE = 2;
 const PROJECTILE_COLOR = "yellow";
-const STEP = 10;
+const STEP = 20;
 const HIT_DELAY = 300;
+const ENEMY_SPAWN_RATE = 1000;
+const DAMAGE_PER_PROJECTILE = 20;
+
+const SPRITES= {
+    player: "./player.png",
+    enemy: "./enemy.png"
+}
 
 class Player {
     constructor(x, y, radius, color) {
@@ -22,35 +29,40 @@ class Player {
     }
 
     draw(ctx) {
-        ctx.beginPath();
-        ctx.arc(this.x, this.y, this.radius, 0, 2 * Math.PI, false);
-        ctx.fillStyle = this.color;
-        ctx.fill();
+        const spriteSize = this.radius * 2; 
+        const sprite = ImageCreator.createImage(SPRITES.player, spriteSize, spriteSize);
+        ctx.drawImage(sprite, this.x - this.radius, this.y - this.radius, spriteSize, spriteSize);
     }
 }
 
 
 class Projectile {
-    constructor(x, y, radius, vx, vy, color) {
+    constructor(x, y, radius, vx, vy) {
         this.x = x;
         this.y = y;
         this.radius = radius;
         this.vx = vx;
         this.vy = vy;
-        this.color = color;
     } 
 
     draw(ctx) {
         ctx.beginPath();
         ctx.arc(this.x, this.y, this.radius, 0, 2 * Math.PI, false);
-        ctx.fillStyle = this.color;
         ctx.fill();
-
     }
 
     update() {
         this.x += this.vx;
         this.y += this.vy;
+    }
+}
+
+
+class ImageCreator {
+    static createImage(src) {
+        const img = new Image();
+        img.src = src;
+        return img;
     }
 }
 
@@ -73,21 +85,20 @@ class ProjectileFactory {
 
 
 class Enemy {
-    constructor(x, y, radius, vx, vy) {
+    constructor(x, y, radius, vx, vy, sprite) {
         this.x = x;
         this.y = y;
         this.radius = radius;
         this.vx = vx;
         this.vy = vy;
-        this.color = "white";
+        this.sprite = sprite;
     }
 
+
     draw(ctx) {
-        ctx.beginPath();
-        ctx.arc(this.x, this.y, this.radius, 0, 2 * Math.PI, false);
-        ctx.fillStyle = this.color;
-        ctx.fill();
+        ctx.drawImage(this.sprite, this.x - this.radius, this.y - this.radius, this.radius * 2, this.radius * 2);
     }
+    
 
     update(towards) {
         const dx = towards.x - this.x;
@@ -102,6 +113,34 @@ class Enemy {
     }
 }
 
+
+class EnemyFactory {
+    static createStartPosition() {
+            const xSpawnDir = Math.random() < 0.5 ? -1 : 1;
+            const ySpawnDir = Math.random() < 0.5 ? -1 : 1;
+            const xPos = (canvas.width + Math.random() * canvas.width) * xSpawnDir;
+            const yPos = (canvas.height + Math.random() * canvas.height) * ySpawnDir;
+
+            return {xPos, yPos};
+    }
+    static createBaseEnemy() {
+        const {xPos, yPos} = EnemyFactory.createStartPosition();
+        const sprite = ImageCreator.createImage(SPRITES.enemy);
+        return new Enemy(xPos, yPos, 40, 0.5, 0.5, sprite);
+    }
+
+    static createFastEnemy() {
+        const {xPos, yPos} = EnemyFactory.createStartPosition();
+        const sprite = ImageCreator.createImage(SPRITES.enemy);
+        return new Enemy(xPos, yPos, 20, 1, 1, sprite);
+    }
+
+    static createGiantEnemy() {
+        const {xPos, yPos} = EnemyFactory.createStartPosition();
+        const sprite = ImageCreator.createImage(SPRITES.enemy);
+        return new Enemy(xPos, yPos, 80, 0.4, 0.4, sprite);
+    }
+}
 
 
 const player = new Player(canvas.width / 2, canvas.height / 2, 20, "blue");
@@ -119,7 +158,7 @@ function sceneCreator() {
     }
 
     return function() {
-        ctx.fillStyle = "black";
+        ctx.fillStyle = "rgba(0, 0, 0, 0.08)";
         ctx.fillRect(0, 0, canvas.width, canvas.height);
         function drawStars() {
            for(let i = 0; i < xDirs.length; i++) {
@@ -135,10 +174,9 @@ function sceneCreator() {
 }
 
 const createScene = sceneCreator();
-
+let animationId;
 function animate() {
-    requestAnimationFrame(animate);
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    animationId = requestAnimationFrame(animate);
     createScene();
 
     // Draw All Projectiles
@@ -161,7 +199,37 @@ function animate() {
         enemy.draw(ctx);
         enemy.update(player);
     }
-    
+
+
+    // Check for Projectile and enemy collision
+    for (let projectile of projectiles) {
+        for (let enemy of enemies) {
+            const dx = projectile.x - enemy.x;
+            const dy = projectile.y - enemy.y;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            if (distance < projectile.radius + enemy.radius) {
+
+                if(enemy.radius > DAMAGE_PER_PROJECTILE) {
+                    enemy.radius -= DAMAGE_PER_PROJECTILE;
+                } else {
+                    enemies.splice(enemies.indexOf(enemy), 1);
+                }
+                projectiles.delete(projectile);
+            }
+        }
+    }
+
+    // Check for Player and enemy collision
+    for (let enemy of enemies) {
+        const dx = player.x - enemy.x;
+        const dy = player.y - enemy.y;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+        if (distance < player.radius + enemy.radius) {
+            // Handle player damage or death
+            cancelAnimationFrame(animationId);
+        }
+    }
+
     // Draw Player
     player.draw(ctx);
 
@@ -257,7 +325,6 @@ window.addEventListener("keydown", e => {
     if(player.x + player.radius >= canvas.width) player.x = canvas.width - player.radius;
     if(player.y <= player.radius) player.y = player.radius;
     if(player.y + player.radius >= canvas.height) player.y = canvas.height - player.radius;
-
 });
 
 window.addEventListener("keyup", e => {
@@ -265,12 +332,20 @@ window.addEventListener("keyup", e => {
     keyPressed[e.key] = false;
 })
 
-setInterval(() => {
-    const xSpawnDir = Math.random() < 0.5 ? -1 : 1;
-    const ySpawnDir = Math.random() < 0.5 ? -1 : 1;
-    const xPos = (canvas.width + Math.random() * canvas.width) * xSpawnDir;
-    const yPos = (canvas.height + Math.random() * canvas.height) * ySpawnDir;
-    enemies.push(new Enemy(xPos, yPos, 20, 0.5, 0.5));
-}, 1000);
 
+function spawnEnemies() {
+    
+    setInterval(() => {
+        const enemyTypes = [
+            EnemyFactory.createBaseEnemy(),
+            EnemyFactory.createFastEnemy(),
+            EnemyFactory.createGiantEnemy()
+        ];
+        const randomIndex = Math.floor(Math.random() * enemyTypes.length);
+        enemies.push(enemyTypes[randomIndex]);
+    }, ENEMY_SPAWN_RATE);
+}
+
+
+spawnEnemies();
 animate();
